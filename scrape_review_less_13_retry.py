@@ -9,8 +9,9 @@ from datetime import datetime, timezone, timedelta
 # CONFIG
 # =========================
 INPUT_FILE = "restaurants_missing_manual.json"
-OUTPUT_FILE = "review_less_13_retry.json"
+OUTPUT_FILE = "reviews_under_13_retry.json"
 MISSING_FILE = "restaurants_missing_backup.json"
+
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0"
