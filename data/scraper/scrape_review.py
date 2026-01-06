@@ -2,8 +2,8 @@ from playwright.sync_api import sync_playwright, TimeoutError
 import json
 import time
 
-INPUT_LINKS = "data/raw_data/foody_links_more_than_0_reviews.txt"
-OUTPUT_JSONL = "data/raw_data/reviews.jsonl"
+INPUT_LINKS = "dan/over_100_wrong_links.txt"
+OUTPUT_JSONL = "dan/over_100_wrong.jsonl"
 FAILED_LINKS = "dan/failed_links.txt"
 
 
@@ -66,7 +66,7 @@ def main():
 
     with sync_playwright() as p, \
          open(OUTPUT_JSONL, "w", encoding="utf-8") as out, \
-         open(FAILED_LINKS, "w", encoding="utf-8") as failed:
+         open(FAILED_LINKS, "a", encoding="utf-8") as failed:
 
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
