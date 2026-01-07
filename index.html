@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripMind AI - Travel Assistant</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-gradient: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            --bot-bubble: rgba(255, 255, 255, 0.1);
+            --user-bubble: linear-gradient(90deg, #8e2de2, #4a00e0);
+        }
+
+        body {
+            background: var(--bg-gradient);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: white;
+        }
+
+        /* Container chính */
+        .chat-container {
+            width: 450px;
+            height: 85vh;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        /* Khu vực hiển thị tin nhắn */
+        #chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scroll-behavior: smooth;
+        }
+
+        .msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            animation: slideUp 0.3s ease-out forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bot { align-self: flex-start; background: var(--bot-bubble); border: 1px solid var(--glass-border); border-bottom-left-radius: 4px; }
+        .user { align-self: flex-end; background: var(--user-bubble); border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(74, 0, 224, 0.3); }
+
+        /* Style cho danh sách địa điểm (Agent 3 output) */
+        .place-card {
+            background: rgba(255,255,255,0.05);
+            border-left: 3px solid #00d2ff;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        /* Input Area */
+        .input-group {
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.2);
+        }
+
+        input {
+            flex: 1;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 12px 15px;
+            color: white;
+            outline: none;
+        }
+
+        button {
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: 12px;
+            padding: 0 20px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover { transform: scale(1.05); filter: brightness(1.1); }
+
+        /* Loading animation */
+        .typing { font-style: italic; color: #aaa; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="header">
+            <h1>TRIPMIND AI</h1>
+            <small style="opacity: 0.6;">Multi-Agent Recommendation System</small>
+        </div>
+        <div id="chat-box">
+            <div class="msg bot">Xin chào! Tôi là TripMind. Bạn muốn đi đâu hôm nay?</div>
+        </div>
+        <div class="input-group">
+            <input type="text" id="userInput" placeholder="VD: Tìm quán ăn ngon ở Hà Nội..." onkeypress="if(event.key==='Enter') sendRequest()">
+            <button onclick="sendRequest()">Gửi</button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const API_URL = "http://127.0.0.1:5000/api/v1/recommend"; // Endpoint từ file test_system.py
+
+        async function sendRequest() {
+            const input = document.getElementById('userInput');
+            const query = input.value.trim();
+            if (!query) return;
+
+            // 1. Hiển thị tin nhắn User
+            appendMessage(query, 'user');
+            input.value = "";
+
+            // 2. Hiển thị trạng thái đang xử lý (Typing)
+            const loadingId = "loading-" + Date.now();
+            appendMessage("TripMind đang phân tích dữ liệu...", 'bot', loadingId);
+
+            try {
+                // 3. Gọi API (Tương tự logic trong test_full_pipeline)
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                    query: query,
+                    trip_type: "any",
+                    n_places: 5
+                    })
+                });
+
+                const res = await response.json();
+                document.getElementById(loadingId).remove(); // Xóa loading
+
+                if (response.ok) {
+                    // 4. Hiển thị lời khuyên từ Agent 4
+                    appendMessage(res.recommendation_text || "Dưới đây là gợi ý cho bạn:", 'bot');
+
+                    // 5. Hiển thị lộ trình tối ưu từ Agent 3
+                    if (res.data && res.data.length > 0) {
+                        let itineraryHtml = "<strong>Lộ trình tối ưu của bạn:</strong><br>";
+                        res.data.forEach((place, index) => {
+                            itineraryHtml += `
+                                <div class="place-card">
+                                    <strong>${index + 1}. ${place.name}</strong><br>
+                                    <small>⭐ Độ hài lòng: ${(place.final_score * 100).toFixed(1)}%</small>
+                                </div>`;
+                        });
+                        appendMessage(itineraryHtml, 'bot');
+                    }
+                } else {
+                    appendMessage("❌ Lỗi hệ thống: " + res.message, 'bot');
+                }
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                appendMessage("❌ Không thể kết nối đến Backend TripMind. Hãy đảm bảo Port 5000 đang chạy.", 'bot');
+                console.error(error);
+            }
+        }
+
+        function appendMessage(content, side, id = null) {
+            const div = document.createElement('div');
+            div.className = `msg ${side}`;
+            if(id) div.id = id;
+            div.innerHTML = content;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
