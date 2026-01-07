@@ -32,6 +32,8 @@ Each review also includes a nested `destination` object containing attraction in
 - `province`: ID and name
 - `categories`: List of category IDs and names
 
+There is an additional dataset of restaurants in Hanoi.
+
 ---
 
 ## Repository Structure
