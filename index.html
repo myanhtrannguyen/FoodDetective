@@ -10,6 +10,7 @@
             --glass-bg: rgba(255, 255, 255, 0.05);
             --glass-border: rgba(255, 255, 255, 0.1);
             --accent-gradient: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            --food-gradient: linear-gradient(90deg, #f093fb, #f5576c); /* Màu cho đồ ăn */
             --bot-bubble: rgba(255, 255, 255, 0.1);
             --user-bubble: linear-gradient(90deg, #8e2de2, #4a00e0);
         }
@@ -25,9 +26,8 @@
             color: white;
         }
 
-        /* Container chính */
         .chat-container {
-            width: 450px;
+            width: 480px; /* Tăng nhẹ chiều rộng */
             height: 85vh;
             background: var(--glass-bg);
             backdrop-filter: blur(20px);
@@ -55,7 +55,6 @@
             font-weight: 800;
         }
 
-        /* Khu vực hiển thị tin nhắn */
         #chat-box {
             flex: 1;
             padding: 20px;
@@ -83,16 +82,30 @@
         .bot { align-self: flex-start; background: var(--bot-bubble); border: 1px solid var(--glass-border); border-bottom-left-radius: 4px; }
         .user { align-self: flex-end; background: var(--user-bubble); border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(74, 0, 224, 0.3); }
 
-        /* Style cho danh sách địa điểm (Agent 3 output) */
+        /* Style cho Địa điểm (Blue) */
         .place-card {
-            background: rgba(255,255,255,0.05);
+            background: rgba(0, 210, 255, 0.1);
             border-left: 3px solid #00d2ff;
-            margin-top: 10px;
+            margin: 8px 0;
             padding: 10px;
             border-radius: 8px;
         }
 
-        /* Input Area */
+        /* Style cho Món ăn (Pink/Orange) */
+        .food-card {
+            background: rgba(245, 87, 108, 0.1);
+            border-left: 3px solid #f5576c;
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .price-tag {
+            color: #ff9f43;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
         .input-group {
             padding: 20px;
             display: flex;
@@ -122,9 +135,6 @@
         }
 
         button:hover { transform: scale(1.05); filter: brightness(1.1); }
-
-        /* Loading animation */
-        .typing { font-style: italic; color: #aaa; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -132,72 +142,83 @@
     <div class="chat-container">
         <div class="header">
             <h1>TRIPMIND AI</h1>
-            <small style="opacity: 0.6;">Multi-Agent Recommendation System</small>
+            <small style="opacity: 0.6;">Integrated Food & Travel Agent</small>
         </div>
         <div id="chat-box">
-            <div class="msg bot">Xin chào! Tôi là TripMind. Bạn muốn đi đâu hôm nay?</div>
+            <div class="msg bot">Chào bạn! Hãy nhập yêu cầu (ví dụ: "Tìm quán cafe đẹp ở Hà Nội dưới 50k")</div>
         </div>
         <div class="input-group">
-            <input type="text" id="userInput" placeholder="VD: Tìm quán ăn ngon ở Hà Nội..." onkeypress="if(event.key==='Enter') sendRequest()">
+            <input type="text" id="userInput" placeholder="Nhập tin nhắn..." onkeypress="if(event.key==='Enter') sendRequest()">
             <button onclick="sendRequest()">Gửi</button>
         </div>
     </div>
 
     <script>
         const chatBox = document.getElementById('chat-box');
-        const API_URL = "http://127.0.0.1:5000/api/v1/recommend"; // Endpoint từ file test_system.py
+        const API_URL = "http://127.0.0.1:5000/api/v1/recommend";
 
         async function sendRequest() {
             const input = document.getElementById('userInput');
             const query = input.value.trim();
             if (!query) return;
 
-            // 1. Hiển thị tin nhắn User
             appendMessage(query, 'user');
             input.value = "";
 
-            // 2. Hiển thị trạng thái đang xử lý (Typing)
             const loadingId = "loading-" + Date.now();
-            appendMessage("TripMind đang phân tích dữ liệu...", 'bot', loadingId);
+            appendMessage("TripMind đang kết nối các Agent...", 'bot', loadingId);
 
             try {
-                // 3. Gọi API (Tương tự logic trong test_full_pipeline)
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                    query: query,
-                    trip_type: "any",
-                    n_places: 5
+                        query: query,
+                        trip_type: "any",
+                        n_places: 5
                     })
                 });
 
                 const res = await response.json();
-                document.getElementById(loadingId).remove(); // Xóa loading
+                const loadingElement = document.getElementById(loadingId);
+                if(loadingElement) loadingElement.remove();
 
                 if (response.ok) {
-                    // 4. Hiển thị lời khuyên từ Agent 4
-                    appendMessage(res.recommendation_text || "Dưới đây là gợi ý cho bạn:", 'bot');
+                    // 1. Hiển thị văn bản Storytelling (Agent 4)
+                    appendMessage(res.recommendation_text, 'bot');
 
-                    // 5. Hiển thị lộ trình tối ưu từ Agent 3
+                    // 2. Hiển thị Lộ trình Địa điểm (Agent 1, 2, 3)
                     if (res.data && res.data.length > 0) {
-                        let itineraryHtml = "<strong>Lộ trình tối ưu của bạn:</strong><br>";
+                        let html = "📍 <strong>Lộ trình tham quan:</strong><br>";
                         res.data.forEach((place, index) => {
-                            itineraryHtml += `
+                            html += `
                                 <div class="place-card">
                                     <strong>${index + 1}. ${place.name}</strong><br>
-                                    <small>⭐ Độ hài lòng: ${(place.final_score * 100).toFixed(1)}%</small>
+                                    <small>⭐ Độ khớp: ${(place.final_score * 100).toFixed(1)}%</small>
                                 </div>`;
                         });
-                        appendMessage(itineraryHtml, 'bot');
+                        appendMessage(html, 'bot');
+                    }
+
+                    // 3. Hiển thị Gợi ý món ăn (Agent 5 - Chỉ khi ở Hà Nội)
+                    if (res.food_recommendations && res.food_recommendations.length > 0) {
+                        let html = "🍜 <strong>Món ngon nên thử tại Hà Nội:</strong><br>";
+                        res.food_recommendations.forEach((item) => {
+                            html += `
+                                <div class="food-card">
+                                    <strong>${item.dish_name}</strong><br>
+                                    <span class="price-tag">💰 Giá: ${item.price.toLocaleString()}đ</span><br>
+                                    <small>🏪 Quán: ${item.restaurant_id.replace(/-/g, ' ')}</small>
+                                </div>`;
+                        });
+                        appendMessage(html, 'bot');
                     }
                 } else {
-                    appendMessage("❌ Lỗi hệ thống: " + res.message, 'bot');
+                    appendMessage("❌ Có lỗi xảy ra: " + res.error, 'bot');
                 }
             } catch (error) {
-                document.getElementById(loadingId).remove();
-                appendMessage("❌ Không thể kết nối đến Backend TripMind. Hãy đảm bảo Port 5000 đang chạy.", 'bot');
-                console.error(error);
+                if(document.getElementById(loadingId)) document.getElementById(loadingId).remove();
+                appendMessage("❌ Lỗi kết nối server Backend.", 'bot');
             }
         }
 
