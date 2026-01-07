@@ -1,48 +1,36 @@
-# 🌍 TripMind — Intelligent Multi-Agent Travel Planner
+# 🌍 TripMind — AI-powered personalized travel experiences
 
-**TripMind** is an AI-powered travel planning system that converts natural language requests into sentiment-aware, geographically optimized itineraries using a modular, multi-agent architecture.
-
----
-
-## Table of Contents
-- [Overview](#overview)
-- [Agents & Workflow](#agents--workflow)
-- [Repository Structure](#repository-structure)
-- [Quick Start](#quick-start)
-- [API Endpoints](#api-endpoints)
-- [Notes & Tips](#notes--tips)
-- [Contributing](#contributing)
-- [License](#license)
+**TripMind** is an AI-powered travel planning system that leverages a dataset of Vietnamese tourist attractions and reviews to convert natural language requests into sentiment-aware, geographically optimized itineraries using a modular, multi-agent architecture.
 
 ---
 
 ## Overview
-TripMind breaks the travel planning problem into specialized components (agents) so each part is easier to develop, test, and scale:
+TripMind breaks the travel planning problem into specialized components (agents), leveraging the dataset of Vietnamese tourist attractions and reviews. Each step uses the data to provide more personalized, informed recommendations:
 
-User query → Semantic recall (vector search) → Sentiment ranking → Route optimization → Natural-language story generation
+User query → Semantic recall (vector search using attraction names, categories, and review text) → Sentiment ranking (based on review ratings and content) → Route optimization (using attraction coordinates) → Natural-language story generation (summarizing recommended destinations with context from reviews).
 
 ---
 
-## Agents & Workflow
+## Dataset
 
-### Agent 1 — Semantic Recall (Gateway)
-- Parses user queries and performs dense semantic search over the vector DB
-- Returns candidate locations for downstream scoring
+The dataset consists of **14,527 reviews** of **964 attractions** in **34 Vietnamese provinces**.
 
-### Agent 2 — Sentiment Analysis
-- Scores candidate locations using review sentiment and quality heuristics
-- Produces a ranked subset of reputable destinations
+Each review record contains:
 
-### Agent 3 — Route Optimization
-- Uses reinforcement learning (DQN / Q-learning) to produce efficient visit sequences
-- Balances distance, time, and other constraints
+- `review_id`: Unique ID for the review
+- `text`: Review text
+- `review_rating`: Numerical rating (1–5)
+- `published_date`: Date the review was published
+- `trip_type`: Type of trip (family, solo, couple, etc.)
 
-### Agent 4 — Natural Response
-- Gets the input of agent 3 and format to a natural form which is friendly with human.
-- Use LLM model only, you can go to together.ai and copy your API key to run our system.
+Each review also includes a nested `destination` object containing attraction information:
 
-### (Optional) Storyteller / Narrative Generator
-- Turns structured itinerary JSON into a friendly, human-readable narrative (uses external LLM APIs)
+- `destination_id`: Unique attraction ID
+- `name`: Normalized attraction name
+- `overall_rating`: Overall rating from the platform
+- `coordinates`: Latitude and longitude
+- `province`: ID and name
+- `categories`: List of category IDs and names
 
 ---
 
@@ -52,32 +40,11 @@ Top-level layout (abridged):
 
 ```
 TripMind/
-├── agent1_choosing_destination/    # semantic recall, gateway components with 3 agents later
-│   ├── src/
-│   │   ├── api.py
-│   │   ├── database.py
-│   │   ├── dataset.py
-│   │   ├── model.py
-│   │   └── utils.py
-│   ├── train_script.py
-│   └── test_client.py
-
+├── agent1_choosing_destination/    # semantic recall, gateway components
 ├── agent2_sentiment_analysis/      # sentiment model & tooling
-│   ├── api.py
-│   ├── train_pipeline.py
-│   ├── label_review.py
-│   └── sentiment_checkpoint.pt
-
 ├── agent3_optimize_route/          # route optimization & RL components
-│   ├── optimize_route_q_learning.py
-│   ├── deep_q_learning/
-│   └── src/
-
 ├── tripmind_vector_db/             # local vector DB + weights
-│   ├── chroma.sqlite3
-│   └── weights/
-
-├── data/                           # cleaned and reformatted datasets which combine data of TripMind project before and Food dataset in Hanoi (new for this project)
+├── data/                           # cleaned and reformatted datasets
 ├── figure/                         # visualizations
 ├── extract_name_from_query.py
 └── test_system.py                  # end-to-end integration tests
@@ -118,28 +85,8 @@ Step 3: Start Agent 1 - Gateway (Main API)
 ```bash
 python agent/src/api.py
 ```
-Step 4: Run Integrated Test (suggest using Chrome to open)
+Step 4: Run Integrated Test
 
 ```bash
-html index.html
+python test_system.py
 ```
-### Main API Endpoints
-Endpoint	Method	Agent	Responsibility
-/api/v1/recommend	POST	Gateway	Entry point for the full 4-agent journey
-/api/v1/provinces	GET	Agent 1	Retrieve database statistics for provinces
-/ranking	POST	Agent 2	Sentiment analysis on candidate lists
-/optimize	POST	Agent 3	Sequencing locations for optimal travel
-/respond	POST	Agent 4	Respond user with natural language
-
-
----
-
-
-## Key Features
-Semantic Search: Captures travel intent beyond simple keywords using Transformer embeddings.
-
-Sentiment-Driven Quality: Automatically filters out places with poor traveler feedback.
-
-RL-Based Itineraries: Paths are optimized using Reinforcement Learning instead of simple heuristics.
-
-Narrative Output: Conversational travel advice generated by Deepseek V3.1
